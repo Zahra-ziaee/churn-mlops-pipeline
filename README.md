@@ -1,26 +1,32 @@
 # Churn MLOps Pipeline
 
-An end-to-end machine learning and MLOps-style project for telecom customer churn prediction.
+An end-to-end MLOps-style machine learning project for telecom customer churn prediction.
 
-This project turns a customer churn prediction model into a production-like system with:
-
-- Training pipeline
-- Data preprocessing
-- Model evaluation
-- Saved model artifact
-- FastAPI prediction service
-- Swagger API documentation
-- Streamlit frontend
-- Docker support
-- Prediction test with Pytest
+This project turns a churn prediction model into a production-oriented system with data preprocessing, model training, evaluation, model artifact saving, FastAPI prediction service, Swagger API documentation, Streamlit frontend, Docker support, and Pytest validation.
 
 ---
 
 ## Project Overview
 
-Customer churn prediction is a common business problem in telecom and subscription-based companies. The goal is to identify customers who are likely to leave so that the business can take retention actions such as discounts, service improvements, contract upgrades, or support outreach.
+Customer churn prediction helps telecom and subscription-based businesses identify customers who are likely to leave.
 
-Unlike a basic notebook-based machine learning project, this project is structured as an MLOps-style system. It includes model training, model persistence, API inference, frontend prediction, testing, and Docker support.
+The goal of this project is to predict churn risk and provide a simple interface for business users and technical users to interact with the model.
+
+This project includes:
+
+- Data loading
+- Data preprocessing
+- Data leakage prevention
+- Train/test split
+- Machine learning model training
+- Model evaluation
+- Saved model artifact
+- FastAPI prediction API
+- Swagger documentation
+- Streamlit frontend
+- Dockerfile
+- Pytest prediction test
+- GitHub-ready project structure
 
 ---
 
@@ -44,6 +50,8 @@ Saved Model Artifact
 FastAPI Prediction Service
    ↓
 Streamlit Frontend
+   ↓
+Docker / Testing / GitHub
 ```
 
 ---
@@ -68,6 +76,11 @@ churn-mlops-pipeline/
 │
 ├── results/
 │   └── metrics.csv
+│
+├── screenshots/
+│   ├── streamlit_churn_input_form.png
+│   ├── streamlit_churn_prediction_result.png
+│   └── fastapi_swagger_docs.png
 │
 ├── src/
 │   ├── __init__.py
@@ -103,7 +116,7 @@ data/raw/telecom_customer_churn.csv
 
 The raw dataset is excluded from GitHub using `.gitignore`.
 
-The dataset includes customer demographics, service subscriptions, contract information, billing behavior, revenue variables, and customer status.
+The dataset contains customer demographic information, service subscriptions, contract details, billing behavior, revenue variables, and customer churn status.
 
 ---
 
@@ -138,7 +151,7 @@ Latitude
 Longitude
 ```
 
-`Churn Category` and `Churn Reason` are removed because they are only available after a customer has already churned. Keeping them would create data leakage.
+`Churn Category` and `Churn Reason` are removed because they are only known after a customer has already churned. Keeping them would create data leakage and make the model unrealistically accurate.
 
 ---
 
@@ -150,7 +163,7 @@ The preprocessing pipeline performs:
 - Missing value handling
 - Removal of ID and leakage columns
 - Train/test split with stratification
-- Categorical encoding through OneHotEncoder
+- Categorical encoding using OneHotEncoder
 - Numeric imputation and scaling
 - Pipeline-based preprocessing for training and inference consistency
 
@@ -164,7 +177,7 @@ The model used in this project is:
 Gradient Boosting Classifier
 ```
 
-The model is wrapped inside a scikit-learn Pipeline that includes:
+The final model is wrapped in a scikit-learn pipeline that includes:
 
 - Numeric preprocessing
 - Categorical preprocessing
@@ -219,7 +232,7 @@ This command:
 3. Splits the data into train and test sets
 4. Trains the Gradient Boosting model
 5. Evaluates model performance
-6. Saves metrics
+6. Saves model metrics
 7. Saves the trained model artifact
 
 Expected outputs:
@@ -264,7 +277,7 @@ http://127.0.0.1:8000/docs
 GET /
 ```
 
-Returns API status message.
+Returns a basic API status message.
 
 ### Health check
 
@@ -295,7 +308,7 @@ Example response:
 
 ## Streamlit Frontend
 
-The project also includes a Streamlit frontend for interactive churn risk prediction.
+The project includes a Streamlit frontend for interactive churn risk prediction.
 
 Run the app:
 
@@ -305,6 +318,7 @@ streamlit run app/streamlit_app.py
 
 The Streamlit app allows users to:
 
+- View model performance metrics
 - Enter customer demographic information
 - Select contract and service options
 - Adjust monthly charges and tenure
@@ -323,9 +337,25 @@ Risk interpretation:
 
 ---
 
+## App Preview
+
+### Streamlit Churn Prediction Form
+
+![Streamlit Churn Input Form](screenshots/streamlit_churn_input_form.png)
+
+### Streamlit Prediction Result
+
+![Streamlit Churn Prediction Result](screenshots/streamlit_churn_prediction_result.png)
+
+### FastAPI Swagger Documentation
+
+![FastAPI Swagger Docs](screenshots/fastapi_swagger_docs.png)
+
+---
+
 ## Testing
 
-The project includes a simple prediction test using Pytest.
+The project includes a Pytest-based prediction test.
 
 Run tests:
 
@@ -340,7 +370,11 @@ The test checks that the prediction output contains:
 - `prediction`
 - `risk_label`
 
-It also verifies that the churn probability is between 0 and 1 and that the prediction label is valid.
+It also verifies that:
+
+- Churn probability is between 0 and 1
+- Prediction is either 0 or 1
+- Risk label is valid
 
 ---
 
@@ -428,6 +462,20 @@ pytest
 
 ---
 
+## Outputs
+
+Running the project generates:
+
+```text
+data/processed/processed_churn_data.csv
+
+models/churn_model.joblib
+
+results/metrics.csv
+```
+
+---
+
 ## Business Interpretation
 
 The churn model can help telecom companies identify customers who are likely to churn and prioritize retention strategies.
@@ -460,13 +508,15 @@ Completed:
 - Streamlit frontend
 - Dockerfile
 - Pytest prediction test
-- Git/GitHub-ready project structure
+- App screenshots in README
+- GitHub-ready project structure
 
 Planned next steps:
 
-- Add prediction logging
+- Add API endpoint tests
+- Add GitHub Actions CI workflow
 - Add batch prediction endpoint
-- Add CI workflow with GitHub Actions
+- Add prediction logging
 - Add model versioning
 - Add monitoring dashboard
 - Add deployment instructions for cloud hosting
@@ -491,9 +541,22 @@ Planned next steps:
 
 ---
 
+## Resume Summary
+
+```text
+End-to-End Customer Churn MLOps Pipeline | Python, Scikit-learn, FastAPI, Streamlit, Docker, Pytest
+
+- Built an end-to-end MLOps-style churn prediction system with data preprocessing, model training, evaluation, and saved model artifacts.
+- Trained a Gradient Boosting classifier achieving 84.6% accuracy and 0.911 ROC-AUC on telecom churn prediction.
+- Developed a FastAPI prediction service with Swagger documentation for real-time churn risk inference.
+- Built a Streamlit frontend to allow business users to enter customer information and receive churn probability with risk interpretation.
+- Added Docker support and Pytest-based prediction validation to make the project production-oriented and deployment-ready.
+```
+
+---
+
 ## Author
 
 Zahra Ziaee
 
-MSc Computer Science - Data Mining  
 Focus: Machine Learning, Customer Analytics, MLOps, API-based ML Systems, and Business-Oriented Data Science

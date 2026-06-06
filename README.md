@@ -541,7 +541,7 @@ Planned next steps:
 
 ---
 
-## Resume Summary
+## Key Takeaways
 
 ```text
 End-to-End Customer Churn MLOps Pipeline | Python, Scikit-learn, FastAPI, Streamlit, Docker, Pytest

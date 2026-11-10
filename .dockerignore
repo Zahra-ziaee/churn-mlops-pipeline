@@ -1,0 +1,38 @@
+
+# Git metadata
+.git/
+.gitignore
+
+# Python environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Local datasets
+data/raw/
+data/processed/
+
+# Environment variables and secrets
+.env
+.env.*
+.streamlit/secrets.toml
+
+# Local model backups
+models/churn_model_32features_backup.joblib
+
+# Development files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Local test and experiment files
+tests/
+check_*.py

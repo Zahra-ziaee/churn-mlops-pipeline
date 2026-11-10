@@ -18,7 +18,7 @@ def build_preprocessor(X: pd.DataFrame) -> ColumnTransformer:
     ).columns.tolist()
 
     categorical_features = X.select_dtypes(
-        include=["object", "category", "bool"]
+        include=["object", "string", "category", "bool"]
     ).columns.tolist()
 
     numeric_transformer = Pipeline(

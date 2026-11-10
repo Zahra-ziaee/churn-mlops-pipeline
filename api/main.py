@@ -1,3 +1,4 @@
+
 import sys
 from pathlib import Path
 from typing import Literal
@@ -18,44 +19,61 @@ app = FastAPI(
 )
 
 
-class CustomerInput(BaseModel):
-    gender: Literal["Male", "Female"] = Field(default="Female")
-    age: int = Field(default=45, ge=18, le=100)
-    married: Literal["Yes", "No"] = Field(default="No")
-    number_of_dependents: int = Field(default=0, ge=0)
-    city: str = Field(default="Los Angeles")
-    zip_code: int = Field(default=90001)
-    number_of_referrals: int = Field(default=0, ge=0)
-    tenure_in_months: int = Field(default=12, ge=0)
-    offer: str = Field(default="No Offer")
-    phone_service: Literal["Yes", "No"] = Field(default="Yes")
-    avg_monthly_long_distance_charges: float = Field(default=20.0, ge=0)
-    multiple_lines: str = Field(default="No")
-    internet_service: Literal["Yes", "No"] = Field(default="Yes")
-    internet_type: str = Field(default="Fiber Optic")
-    avg_monthly_gb_download: float = Field(default=25.0, ge=0)
-    online_security: str = Field(default="No")
-    online_backup: str = Field(default="No")
-    device_protection_plan: str = Field(default="No")
-    premium_tech_support: str = Field(default="No")
-    streaming_tv: str = Field(default="No")
-    streaming_movies: str = Field(default="No")
-    streaming_music: str = Field(default="No")
-    unlimited_data: str = Field(default="Yes")
-    contract: str = Field(default="Month-to-Month")
-    paperless_billing: Literal["Yes", "No"] = Field(default="Yes")
-    payment_method: str = Field(default="Credit Card")
-    monthly_charge: float = Field(default=85.0, ge=0)
-    total_charges: float = Field(default=1000.0, ge=0)
-    total_refunds: float = Field(default=0.0, ge=0)
-    total_extra_data_charges: float = Field(default=0.0, ge=0)
-    total_long_distance_charges: float = Field(default=200.0, ge=0)
-    total_revenue: float = Field(default=1200.0, ge=0)
+# --------------------------------------------------
+# Customer Input Schema
+# --------------------------------------------------
 
+class CustomerInput(BaseModel):
+    gender: Literal["Male", "Female"] = Field(...)
+    age: int = Field(..., ge=18, le=100)
+    married: Literal["Yes", "No"] = Field(...)
+    number_of_dependents: int = Field(..., ge=0)
+
+    city: str = Field(...)
+    zip_code: int = Field(...)
+
+    number_of_referrals: int = Field(..., ge=0)
+    tenure_in_months: int = Field(..., ge=0)
+
+    offer: str = Field(...)
+    phone_service: Literal["Yes", "No"] = Field(...)
+    avg_monthly_long_distance_charges: float = Field(..., ge=0)
+    multiple_lines: str = Field(...)
+
+    internet_service: Literal["Yes", "No"] = Field(...)
+    internet_type: str = Field(...)
+    avg_monthly_gb_download: float = Field(..., ge=0)
+
+    online_security: str = Field(...)
+    online_backup: str = Field(...)
+    device_protection_plan: str = Field(...)
+    premium_tech_support: str = Field(...)
+
+    streaming_tv: str = Field(...)
+    streaming_movies: str = Field(...)
+    streaming_music: str = Field(...)
+    unlimited_data: str = Field(...)
+
+    contract: str = Field(...)
+    paperless_billing: Literal["Yes", "No"] = Field(...)
+    payment_method: str = Field(...)
+
+    monthly_charge: float = Field(..., ge=0)
+    total_charges: float = Field(..., ge=0)
+    total_refunds: float = Field(..., ge=0)
+    total_extra_data_charges: float = Field(..., ge=0)
+    total_long_distance_charges: float = Field(..., ge=0)
+    total_revenue: float = Field(..., ge=0)
+
+
+# --------------------------------------------------
+# Convert API Input to Model Input
+# --------------------------------------------------
 
 def convert_api_input_to_model_input(customer: CustomerInput) -> dict:
     """
-    Convert snake_case API input into original dataset column names expected by the model.
+    Convert snake_case API fields to the original
+    dataset column names expected by the trained model.
     """
     return {
         "Gender": customer.gender,
@@ -93,6 +111,10 @@ def convert_api_input_to_model_input(customer: CustomerInput) -> dict:
     }
 
 
+# --------------------------------------------------
+# Root Endpoint
+# --------------------------------------------------
+
 @app.get("/")
 def root():
     return {
@@ -100,6 +122,10 @@ def root():
         "docs": "/docs",
     }
 
+
+# --------------------------------------------------
+# Health Check Endpoint
+# --------------------------------------------------
 
 @app.get("/health")
 def health_check():
@@ -109,9 +135,18 @@ def health_check():
     }
 
 
+# --------------------------------------------------
+# Prediction Endpoint
+# --------------------------------------------------
+
 @app.post("/predict")
 def predict(customer: CustomerInput):
+    """
+    Validate customer input, transform column names,
+    and return churn prediction results.
+    """
     customer_data = convert_api_input_to_model_input(customer)
+
     prediction_result = predict_churn(customer_data)
 
     return prediction_result

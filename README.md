@@ -1,562 +1,374 @@
-# Churn MLOps Pipeline
 
-An end-to-end MLOps-style machine learning project for telecom customer churn prediction.
+# Telecom Customer Churn | MLOps-Style ML Pipeline
 
-This project turns a churn prediction model into a production-oriented system with data preprocessing, model training, evaluation, model artifact saving, FastAPI prediction service, Swagger API documentation, Streamlit frontend, Docker support, and Pytest validation.
+An end-to-end **machine learning portfolio project** for estimating telecom customer churn risk, from dataset preparation and model comparison to a validated prediction API and an interactive user interface.
 
----
+**Stack:** Python · pandas · scikit-learn · FastAPI · Pydantic · Streamlit · pytest · Joblib · Docker (configuration included)
 
-## Project Overview
+> **Project scope:** This is an MLOps-style prototype, **not a validated production deployment**. The project includes an inference API, model artifact, tests, and a Dockerfile; it does not yet include automated CI/CD, monitoring, drift detection, or prospective validation.
 
-Customer churn prediction helps telecom and subscription-based businesses identify customers who are likely to leave.
+## Highlights
 
-The goal of this project is to predict churn risk and provide a simple interface for business users and technical users to interact with the model.
+- **25 required customer features** in the current model and API, reduced from an earlier 32-feature version.
+- Gradient Boosting classifier with imputation, encoding, and numeric scaling inside a scikit-learn `Pipeline`.
+- Feature-group ablation and stratified cross-validation on the training split.
+- A configurable **decision threshold of `0.30`**, explored using out-of-fold training predictions and an illustrative business-cost model.
+- FastAPI `POST /predict` with Pydantic validation (`422` for incomplete or unexpected fields).
+- Streamlit form using the same prediction function as the API; **Streamlit calls Python inference directly, not the HTTP API**.
+- Automated API, inference, and decision-threshold tests.
 
-This project includes:
-
-- Data loading
-- Data preprocessing
-- Data leakage prevention
-- Train/test split
-- Machine learning model training
-- Model evaluation
-- Saved model artifact
-- FastAPI prediction API
-- Swagger documentation
-- Streamlit frontend
-- Dockerfile
-- Pytest prediction test
-- GitHub-ready project structure
-
----
-
-## MLOps Architecture
+## Architecture
 
 ```text
-Raw Data
-   ↓
-Data Loading
-   ↓
-Preprocessing
-   ↓
-Train/Test Split
-   ↓
-Model Training
-   ↓
-Model Evaluation
-   ↓
-Saved Model Artifact
-   ↓
-FastAPI Prediction Service
-   ↓
-Streamlit Frontend
-   ↓
-Docker / Testing / GitHub
+                  Maven Analytics telecom churn CSV
+                               |
+                      Data preparation
+                (target, missing values, drops)
+                               |
+                  Stratified train/test split
+                               |
+               Training-only feature experiments
+                       and cross-validation
+                               |
+                scikit-learn preprocessing +
+                   GradientBoostingClassifier
+                               |
+                 Saved 25-feature Joblib model
+                               |
+                     src/predict.py
+               (predict_proba + threshold 0.30)
+                         /             \
+                        /               \
+            FastAPI /predict         Streamlit app
+             HTTP interface         direct Python call
 ```
 
----
-
-## Project Structure
+## Repository Layout
 
 ```text
 churn-mlops-pipeline/
-│
 ├── api/
-│   └── main.py
-│
+│   └── main.py                     # FastAPI endpoints and 25-field schema
 ├── app/
-│   └── streamlit_app.py
-│
+│   └── streamlit_app.py           # Interactive 25-feature input form
 ├── data/
-│   ├── raw/
-│   └── processed/
-│
+│   ├── raw/                       # Local input dataset; ignored by Git
+│   └── processed/                 # Generated data; ignored by Git
 ├── models/
-│   └── churn_model.joblib
-│
+│   ├── churn_model.joblib         # Original model artifact, if retained
+│   └── churn_model_25features.joblib
 ├── results/
-│   └── metrics.csv
-│
-├── screenshots/
-│   ├── streamlit_churn_input_form.png
-│   ├── streamlit_churn_prediction_result.png
-│   └── fastapi_swagger_docs.png
-│
+│   ├── metrics.csv                # Historical 32-feature results
+│   └── metrics_25features.csv     # 25-feature results at threshold 0.50
 ├── src/
-│   ├── __init__.py
-│   ├── config.py
+│   ├── config.py                  # Model path and decision threshold
 │   ├── data_loader.py
 │   ├── preprocessing.py
 │   ├── train.py
 │   ├── predict.py
-│   ├── evaluation.py
-│   └── utils.py
-│
+│   └── evaluation.py
 ├── tests/
-│   └── test_prediction.py
-│
+│   ├── test_prediction.py
+│   ├── test_api.py
+│   └── test_threshold.py
+├── check_financial_features.py   # Financial-feature ablation
+├── check_geography_cv.py         # Training-only feature-group CV
+├── check_threshold_cv.py         # Training-only threshold analysis
+├── train_reduced_model.py        # Trains the 25-feature artifact
+├── main.py                       # Original training entry point
+├── Dockerfile                    # Container configuration
+├── requirements.txt
 ├── .gitignore
-├── Dockerfile
-├── main.py
-├── README.md
-└── requirements.txt
+└── README.md
 ```
 
----
+## Dataset and Prediction Target
 
-## Dataset
-
-The project uses the Maven Analytics Telecom Customer Churn dataset.
-
-Raw dataset file:
+The project uses the **Maven Analytics Telecom Customer Churn** dataset, with **7,043 records** in the original local file. The input file is expected at:
 
 ```text
 data/raw/telecom_customer_churn.csv
 ```
 
-The raw dataset is excluded from GitHub using `.gitignore`.
+The raw dataset is excluded from version control. Obtain it from its original dataset provider and place it at the path above to reproduce training and evaluation. Check the dataset's terms before redistributing it.
 
-The dataset contains customer demographic information, service subscriptions, contract details, billing behavior, revenue variables, and customer churn status.
+The original `Customer Status` field is mapped to the binary target:
 
----
-
-## Target Definition
-
-The original target column is:
-
-```text
-Customer Status
-```
-
-It is converted into a binary target:
-
-| Customer Status | Churn |
+| Original status | Binary target |
 |---|---:|
-| Churned | 1 |
-| Stayed | 0 |
-| Joined | 0 |
+| `Churned` | `1` (churn) |
+| `Stayed` | `0` (not churn) |
+| `Joined` | `0` (not churn) |
 
----
+**Interpretation caveat:** Combining `Stayed` and `Joined` is the definition used in this experiment. It is not equivalent to a validated *future churn within a fixed prediction window* target. A time-indexed dataset and a defined observation/prediction window would be needed for a prospective churn forecasting claim.
 
-## Data Leakage Prevention
+## Data Processing and Feature Selection
 
-The following fields are removed before model training:
+The pipeline handles the target, service-related missing values, and excluded fields before model fitting. Numerical features use median imputation and scaling; categorical features use most-frequent imputation and `OneHotEncoder(handle_unknown="ignore")`. The fitting stages are contained in a scikit-learn pipeline.
 
-```text
-Customer ID
-Customer Status
-Churn Category
-Churn Reason
-Latitude
-Longitude
-```
-
-`Churn Category` and `Churn Reason` are removed because they are only known after a customer has already churned. Keeping them would create data leakage and make the model unrealistically accurate.
-
----
-
-## Preprocessing
-
-The preprocessing pipeline performs:
-
-- Binary target creation
-- Missing value handling
-- Removal of ID and leakage columns
-- Train/test split with stratification
-- Categorical encoding using OneHotEncoder
-- Numeric imputation and scaling
-- Pipeline-based preprocessing for training and inference consistency
-
----
-
-## Model
-
-The model used in this project is:
+The project excludes identifiers and target-revealing fields such as `Customer ID`, `Churn Category`, and `Churn Reason`, as well as latitude and longitude. The current 25-feature model also removes:
 
 ```text
-Gradient Boosting Classifier
+City
+Zip Code
+Total Revenue
+Total Charges
+Total Refunds
+Total Extra Data Charges
+Total Long Distance Charges
 ```
 
-The final model is wrapped in a scikit-learn pipeline that includes:
-
-- Numeric preprocessing
-- Categorical preprocessing
-- Gradient Boosting classifier
-
-The trained model is saved as:
+`City` and `Zip Code` were investigated as high-cardinality geographic features. The five financial variables were examined as a group; in this dataset, `Total Revenue` is algebraically determined by the other four:
 
 ```text
-models/churn_model.joblib
+Total Revenue = Total Charges - Total Refunds
+              + Total Extra Data Charges + Total Long Distance Charges
 ```
 
----
+**Important:** Redundancy does not, by itself, establish data leakage. The removal decision reflects feature simplification and exploratory ablation results. Availability of all remaining variables at the intended prediction time still needs to be confirmed.
 
-## Model Performance
+### Current Input Schema (25 Required Features)
 
-The final model achieved:
+The API uses these snake_case field names; Streamlit provides corresponding form controls:
 
-| Metric | Value |
-|---|---:|
-| Accuracy | 0.8460 |
-| Precision | 0.7357 |
-| Recall | 0.6551 |
-| F1-score | 0.6931 |
-| ROC-AUC | 0.9115 |
+| Customer profile | Services | Billing and contract |
+|---|---|---|
+| `gender` | `offer` | `contract` |
+| `age` | `phone_service` | `paperless_billing` |
+| `married` | `avg_monthly_long_distance_charges` | `payment_method` |
+| `number_of_dependents` | `multiple_lines` | `monthly_charge` |
+| `number_of_referrals` | `internet_service` | |
+| `tenure_in_months` | `internet_type` | |
+| | `avg_monthly_gb_download` | |
+| | `online_security` | |
+| | `online_backup` | |
+| | `device_protection_plan` | |
+| | `premium_tech_support` | |
+| | `streaming_tv` | |
+| | `streaming_movies` | |
+| | `streaming_music` | |
+| | `unlimited_data` | |
 
-Confusion Matrix:
+All 25 fields must be supplied to the API. Extra fields are rejected rather than silently accepted.
+
+## Model and Evaluation
+
+**Algorithm:** `GradientBoostingClassifier` within a preprocessing pipeline.
+
+The original and reduced models use a stratified **80% training / 20% test split** (`random_state=42`). The saved current inference artifact is:
 
 ```text
-[[947, 88], [129, 245]]
+models/churn_model_25features.joblib
 ```
 
-Metrics are saved to:
+### Historical Held-Out Results (Decision Threshold = 0.50)
+
+| Metric | Previous: 32 features | Current: 25 features |
+|---|---:|---:|
+| Accuracy | 0.8460 | 0.8446 |
+| Precision | 0.7357 | 0.7259 |
+| Recall | 0.6551 | 0.6658 |
+| F1-score | 0.6931 | 0.6946 |
+| ROC-AUC | 0.9115 | 0.9058 |
+
+25-feature confusion matrix, with rows representing actual class `[0, 1]` and columns predicted class `[0, 1]`:
 
 ```text
-results/metrics.csv
+[[941,  94],
+ [125, 249]]
 ```
 
----
+The reduced model retains similar overall classification performance with fewer inputs. It has slightly higher recall and F1, but lower precision and ROC-AUC; it is **not proven to be statistically superior**.
 
-## Training Pipeline
+> **Evaluation limitation:** The held-out split had already been consulted during exploratory modeling. These results are useful for comparison and documentation, but should **not** be represented as a pristine, never-touched final test. A new independent or temporally separated evaluation is needed for a stronger generalization claim.
 
-Run the training pipeline:
+### Training-Only Feature-Group Comparison
 
-```bash
-python main.py
+A **3-fold stratified cross-validation on the training portion** compared the original and reduced feature sets:
+
+| Configuration | Features | Mean ROC-AUC | Mean Recall | Mean F1 |
+|---|---:|---:|---:|---:|
+| All features | 32 | 0.9087 | 0.6495 | 0.6991 |
+| Without geography | 30 | 0.9088 | 0.6649 | 0.7020 |
+| Without financial group | 27 | 0.9087 | 0.6535 | 0.7016 |
+| Without both groups | 25 | 0.9092 | 0.6689 | 0.7050 |
+
+The results motivated the 25-feature candidate. They do not establish a causal benefit from dropping features or prove a statistically significant improvement.
+
+### Decision Threshold: `0.30`
+
+Inference applies the configurable threshold in `src/config.py`:
+
+```python
+DECISION_THRESHOLD = 0.30
 ```
 
-This command:
+The model still returns its estimated churn score through `predict_proba`; the threshold only determines the binary prediction and `High Risk` / `Low Risk` label.
 
-1. Loads the raw churn dataset
-2. Applies preprocessing
-3. Splits the data into train and test sets
-4. Trains the Gradient Boosting model
-5. Evaluates model performance
-6. Saves model metrics
-7. Saves the trained model artifact
+Thresholds were compared using **out-of-fold predictions on training data**, not the held-out test:
 
-Expected outputs:
+| Threshold | Precision | Recall | F1 | Flagged customers |
+|---|---:|---:|---:|---:|
+| 0.20 | 0.5697 | 0.8856 | 0.6934 | 2,324 |
+| **0.30** | **0.6350** | **0.8214** | **0.7162** | **1,934** |
+| 0.40 | 0.6904 | 0.7398 | 0.7142 | 1,602 |
+| 0.50 | 0.7452 | 0.6689 | 0.7050 | 1,342 |
+| 0.60 | 0.7959 | 0.5712 | 0.6651 | 1,073 |
+| 0.70 | 0.8484 | 0.4341 | 0.5743 | 765 |
+
+Among these six thresholds, `0.30` had the highest observed out-of-fold F1. It also minimized an **illustrative**, not empirically validated cost function:
 
 ```text
-data/processed/processed_churn_data.csv
-models/churn_model.joblib
-results/metrics.csv
+Illustrative cost = (1 × number of customers flagged)
+                  + (3 × number of missed churners)
 ```
 
----
+Real deployment would require measured intervention costs, treatment effectiveness, customer lifetime value, capacity constraints, and probability calibration. **The historical test metrics above were computed at `0.50`; do not interpret them as the final deployed `0.30` classification metrics.** The chosen threshold has not received a fresh independent evaluation.
 
-## FastAPI Prediction Service
+## Run Locally (Windows CMD)
 
-The project includes a FastAPI service for real-time churn prediction.
+### 1. Clone and create an environment
 
-Run the API:
-
-```bash
-uvicorn api.main:app --reload
+```cmd
+git clone https://github.com/Zahra-ziaee/churn-mlops-pipeline.git
+cd churn-mlops-pipeline
+py -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Open the API root:
+The repository pins library versions in `requirements.txt`, including `httpx2==2.16.0` for the installed FastAPI test-client stack. For compatibility with the saved Joblib model, use the same scikit-learn version as the training environment (`scikit-learn==1.8.0`). Only load model artifacts from trusted sources.
 
-```text
-http://127.0.0.1:8000
+### 2. Reproduce the reduced model (dataset required)
+
+Place `telecom_customer_churn.csv` in `data/raw/`, then run:
+
+```cmd
+.venv\Scripts\python.exe train_reduced_model.py
 ```
 
-Open Swagger UI:
+This writes `models/churn_model_25features.joblib` without overwriting the original `churn_model.joblib`. If the reduced model artifact is already provided, it can be used for inference without the raw dataset. Re-running experiments requires the dataset.
 
-```text
-http://127.0.0.1:8000/docs
+### 3. Run the FastAPI service
+
+```cmd
+.venv\Scripts\python.exe -m uvicorn api.main:app --reload
 ```
 
----
+- Root: `http://127.0.0.1:8000/`
+- Health endpoint: `http://127.0.0.1:8000/health`
+- Interactive Swagger docs: `http://127.0.0.1:8000/docs`
 
-## API Endpoints
+### 4. Run the Streamlit app
 
-### Root endpoint
+In a second terminal:
 
-```http
-GET /
+```cmd
+.venv\Scripts\python.exe -m streamlit run app\streamlit_app.py
 ```
 
-Returns a basic API status message.
+Streamlit normally opens at `http://localhost:8501`. The interface collects the same 25 required fields and calls `src.predict.predict_churn` directly.
 
-### Health check
+### 5. Run automated tests
 
-```http
-GET /health
+```cmd
+.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Returns API health status.
+The test suite covers prediction output shape, API validation (missing and extra fields), and threshold boundary cases. It includes five original tests plus five parameterized threshold scenarios. Run the command above to confirm the complete suite in your environment; a clean-environment run and deployment integration test are also recommended.
 
-### Prediction endpoint
+## API Usage
 
-```http
-POST /predict
-```
+### `POST /predict`
 
-Example response:
+Send all 25 required fields as JSON. Example **request** (illustrative customer):
 
 ```json
 {
-  "churn_probability": 0.5153,
-  "churn_probability_percent": "51.53%",
+  "gender": "Female",
+  "age": 45,
+  "married": "No",
+  "number_of_dependents": 0,
+  "number_of_referrals": 0,
+  "tenure_in_months": 3,
+  "offer": "No Offer",
+  "phone_service": "Yes",
+  "avg_monthly_long_distance_charges": 10.0,
+  "multiple_lines": "No",
+  "internet_service": "Yes",
+  "internet_type": "Fiber Optic",
+  "avg_monthly_gb_download": 25.0,
+  "online_security": "No",
+  "online_backup": "No",
+  "device_protection_plan": "No",
+  "premium_tech_support": "No",
+  "streaming_tv": "Yes",
+  "streaming_movies": "No",
+  "streaming_music": "No",
+  "unlimited_data": "Yes",
+  "contract": "Month-to-Month",
+  "paperless_billing": "Yes",
+  "payment_method": "Credit Card",
+  "monthly_charge": 95.0
+}
+```
+
+An example **response format** (numbers for illustration only, not a computed response to the example request):
+
+```json
+{
+  "churn_probability": 0.4485,
+  "churn_probability_percent": 44.85,
   "prediction": 1,
   "risk_label": "High Risk"
 }
 ```
 
----
+- `prediction = 1` when the model score is **greater than or equal to `0.30`**.
+- `churn_probability_percent` is a **number**, not a string with a `%` suffix.
+- Missing required fields, invalid values, or unexpected extra fields return HTTP `422`.
+- `GET /health` is a service response; it should not be treated as a comprehensive model-readiness or data-quality check.
 
-## Streamlit Frontend
+## Docker
 
-The project includes a Streamlit frontend for interactive churn risk prediction.
-
-Run the app:
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-The Streamlit app allows users to:
-
-- View model performance metrics
-- Enter customer demographic information
-- Select contract and service options
-- Adjust monthly charges and tenure
-- Predict churn risk
-- View churn probability
-- View business interpretation
-- Inspect raw prediction output
-
-Risk interpretation:
-
-| Probability Range | Risk Level |
-|---|---|
-| Below 40% | Low Risk |
-| 40% to 70% | Moderate Risk |
-| 70% and above | High Risk |
-
----
-
-## App Preview
-
-### Streamlit Churn Prediction Form
-
-![Streamlit Churn Input Form](screenshots/streamlit_churn_input_form.png)
-
-### Streamlit Prediction Result
-
-![Streamlit Churn Prediction Result](screenshots/streamlit_churn_prediction_result.png)
-
-### FastAPI Swagger Documentation
-
-![FastAPI Swagger Docs](screenshots/fastapi_swagger_docs.png)
-
----
-
-## Testing
-
-The project includes a Pytest-based prediction test.
-
-Run tests:
-
-```bash
-pytest
-```
-
-The test checks that the prediction output contains:
-
-- `churn_probability`
-- `churn_probability_percent`
-- `prediction`
-- `risk_label`
-
-It also verifies that:
-
-- Churn probability is between 0 and 1
-- Prediction is either 0 or 1
-- Risk label is valid
-
----
-
-## Docker Support
-
-This project includes a Dockerfile for containerizing the FastAPI service.
-
-Build the Docker image:
+A `Dockerfile` is included. Standard build/run commands are:
 
 ```bash
 docker build -t churn-mlops-pipeline .
-```
-
-Run the container:
-
-```bash
 docker run -p 8000:8000 churn-mlops-pipeline
 ```
 
-Then open:
+**Verification status:** These Docker commands have **not been revalidated** after the 25-feature/model-path refactor. Check that the image contains the current artifact and that its startup command uses the updated service before claiming Docker deployment readiness.
 
-```text
-http://127.0.0.1:8000/docs
-```
+## Screenshots
 
----
+Screenshots captured earlier in development are retained below as **illustrative previews**. They may show the previous feature set or threshold; capture fresh images after the latest refactor before describing them as the current interface.
 
-## How to Run Locally
+![Streamlit input form](screenshots/streamlit_churn_input_form.png)
 
-### 1. Clone the repository
+![Streamlit prediction result](screenshots/streamlit_churn_prediction_result.png)
 
-```bash
-git clone https://github.com/Zahra-ziaee/churn-mlops-pipeline.git
-cd churn-mlops-pipeline
-```
+![FastAPI Swagger UI](screenshots/fastapi_swagger_docs.png)
 
-### 2. Create and activate virtual environment
+## Limitations and Planned Improvements
 
-Windows PowerShell:
+- **Temporal validity:** Confirm that all features are known at prediction time and define a prediction horizon; investigate potential snapshot or survivorship leakage.
+- **Target definition:** Revisit treatment of newly joined customers and establish future churn labels if temporal data becomes available.
+- **Evaluation independence:** Validate on a fresh time-based or external holdout; perform nested evaluation if jointly tuning features and thresholds.
+- **Probability interpretation:** Assess calibration (e.g., calibration curve and Brier score) before treating scores as reliable customer-level probabilities.
+- **Business decisioning:** Replace illustrative costs with actual retention costs, customer value, intervention effectiveness, and contact-capacity constraints.
+- **Engineering:** Add GitHub Actions CI, clean-environment installation checks, API/model readiness checks, prediction logging, model/data versioning, and monitoring.
+- **Deployment:** Re-test the Docker image and update any screenshots captured before the 25-feature change.
 
-```bash
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
+## Project Status
 
-### 3. Install dependencies
+**Implemented and locally exercised:** Reduced model artifact, separate metric export, FastAPI request validation, Streamlit prediction flow, configurable inference threshold, and automated tests.
 
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Add dataset
-
-Place the dataset file here:
-
-```text
-data/raw/telecom_customer_churn.csv
-```
-
-### 5. Train the model
-
-```bash
-python main.py
-```
-
-### 6. Run the API
-
-```bash
-uvicorn api.main:app --reload
-```
-
-### 7. Run the Streamlit app
-
-In another terminal:
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-### 8. Run tests
-
-```bash
-pytest
-```
-
----
-
-## Outputs
-
-Running the project generates:
-
-```text
-data/processed/processed_churn_data.csv
-
-models/churn_model.joblib
-
-results/metrics.csv
-```
-
----
-
-## Business Interpretation
-
-The churn model can help telecom companies identify customers who are likely to churn and prioritize retention strategies.
-
-Possible retention actions include:
-
-- Offering discounts to high-risk customers
-- Encouraging month-to-month customers to switch to longer contracts
-- Providing premium tech support
-- Offering online security services
-- Targeting customers with low referrals or short tenure
-- Creating customer engagement campaigns
-
----
-
-## Current Status
-
-Completed:
-
-- Data loading
-- Data preprocessing
-- Leakage prevention
-- Train/test split
-- Gradient Boosting model training
-- Model evaluation
-- Metrics saving
-- Model artifact saving with Joblib
-- FastAPI prediction service
-- Swagger API documentation
-- Streamlit frontend
-- Dockerfile
-- Pytest prediction test
-- App screenshots in README
-- GitHub-ready project structure
-
-Planned next steps:
-
-- Add API endpoint tests
-- Add GitHub Actions CI workflow
-- Add batch prediction endpoint
-- Add prediction logging
-- Add model versioning
-- Add monitoring dashboard
-- Add deployment instructions for cloud hosting
-
----
-
-## Technologies Used
-
-- Python
-- Pandas
-- NumPy
-- Scikit-learn
-- Joblib
-- FastAPI
-- Uvicorn
-- Pydantic
-- Streamlit
-- Pytest
-- Docker
-- Git
-- GitHub
-
----
-
-## Key Takeaways
-
-```text
-End-to-End Customer Churn MLOps Pipeline | Python, Scikit-learn, FastAPI, Streamlit, Docker, Pytest
-
-- Built an end-to-end MLOps-style churn prediction system with data preprocessing, model training, evaluation, and saved model artifacts.
-- Trained a Gradient Boosting classifier achieving 84.6% accuracy and 0.911 ROC-AUC on telecom churn prediction.
-- Developed a FastAPI prediction service with Swagger documentation for real-time churn risk inference.
-- Built a Streamlit frontend to allow business users to enter customer information and receive churn probability with risk interpretation.
-- Added Docker support and Pytest-based prediction validation to make the project production-oriented and deployment-ready.
-```
-
----
+**Not yet established:** Prospective churn forecasting validity, unbiased final test performance for the chosen workflow, calibrated probability estimates, or production-grade MLOps operation.
 
 ## Author
 
-Zahra Ziaee
+**Zahra Ziaee**
 
-Focus: Machine Learning, Customer Analytics, MLOps, API-based ML Systems, and Business-Oriented Data Science
+
+
+M.Sc. Computer Science (Data Mining) · Machine Learning · Customer Analytics · Practical MLOps

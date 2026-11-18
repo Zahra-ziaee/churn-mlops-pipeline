@@ -339,15 +339,42 @@ docker run -p 8000:8000 churn-mlops-pipeline
 
 **Verification status:** These Docker commands have **not been revalidated** after the 25-feature/model-path refactor. Check that the image contains the current artifact and that its startup command uses the updated service before claiming Docker deployment readiness.
 
+
+
 ## Screenshots
 
-Screenshots captured earlier in development are retained below as **illustrative previews**. They may show the previous feature set or threshold; capture fresh images after the latest refactor before describing them as the current interface.
+### 1. Streamlit — Customer Input Form
 
-![Streamlit input form](screenshots/streamlit_churn_input_form.png)
+![Customer Input Form](screenshots/streamlit_churn_input_form.png)
 
-![Streamlit prediction result](screenshots/streamlit_churn_prediction_result.png)
+### 2. Streamlit — Customer Features
 
-![FastAPI Swagger UI](screenshots/fastapi_swagger_docs.png)
+![Customer Features](screenshots/streamlit_customer_fields.png)
+
+### 3. Streamlit — Churn Prediction Result
+
+![Churn Prediction Result](screenshots/streamlit_churn_prediction_result.png)
+
+### FastAPI — Swagger Documentation
+
+![FastAPI Swagger Documentation](screenshots/fastapi_swagger_docs.png)
+
+
+### 1. Streamlit — Customer Input Form
+
+![Customer Input Form](screenshots/streamlit_churn_input_form.png)
+
+### 2. Streamlit — Customer Features
+
+![Customer Features](screenshots/streamlit_customer_fields.png)
+
+### 3. Streamlit — Churn Prediction Result
+
+![Churn Prediction Result](screenshots/streamlit_churn_prediction_result.png)
+
+### FastAPI — Swagger Documentation
+
+![FastAPI Swagger Documentation](screenshots/fastapi_swagger_docs.png)
 
 ## Limitations and Planned Improvements
 

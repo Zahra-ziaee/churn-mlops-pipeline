@@ -7,48 +7,72 @@ from pydantic import ValidationError
 
 
 # --------------------------------------------------
-# Project path and imports
+# Project imports
 # --------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from api.main import (
     CustomerInput,
     convert_api_input_to_model_input,
 )
-from src.config import MODEL_FILE
+from src.config import DECISION_THRESHOLD, MODEL_FILE
 from src.predict import predict_churn
 
 
 # --------------------------------------------------
-# Customer input form - 25 features
+# Streamlit configuration
+# --------------------------------------------------
+
+st.set_page_config(
+    page_title="Churn MLOps Prediction App",
+    page_icon="📊",
+    layout="wide",
+)
+
+
+# --------------------------------------------------
+# Customer input form
 # --------------------------------------------------
 
 def build_customer_input():
+    """Collect the 25 required model inputs."""
+
     st.subheader("Customer Information")
 
     st.info(
-        "The form contains example values. Review and "
-        "replace them with actual customer information "
-        "before requesting a prediction."
+        "The form contains example values. "
+        "Review and replace them with actual customer "
+        "information before requesting a prediction."
     )
 
     with st.form("churn_prediction_form"):
 
-        col1, col2 = st.columns(2)
+        left, right = st.columns(2, gap="medium")
 
-        with col1:
-            st.markdown("### Customer Profile")
+        # LEFT COLUMN
+        with left:
+
+            st.subheader("Customer Profile")
 
             gender = st.selectbox(
-                "Gender", ["Female", "Male"]
+                "Gender",
+                ["Female", "Male"],
             )
 
-            age = st.slider("Age", 18, 100, 45)
+            age = st.slider(
+                "Age",
+                min_value=18,
+                max_value=100,
+                value=45,
+            )
 
             married = st.selectbox(
-                "Married", ["No", "Yes"]
+                "Married",
+                ["No", "Yes"],
             )
 
             number_of_dependents = st.number_input(
@@ -84,34 +108,44 @@ def build_customer_input():
                 ],
             )
 
-            st.markdown("### Phone Services")
+            st.subheader("Phone Services")
 
             phone_service = st.selectbox(
-                "Phone Service", ["Yes", "No"]
+                "Phone Service",
+                ["Yes", "No"],
             )
 
-            avg_monthly_long_distance_charges = (
-                st.number_input(
-                    "Avg Monthly Long Distance Charges",
-                    min_value=0.0,
-                    value=20.0,
-                )
+            avg_monthly_long_distance_charges = st.number_input(
+                "Avg Monthly Long Distance Charges",
+                min_value=0.0,
+                value=20.0,
+                step=1.0,
+                format="%.2f",
             )
 
             multiple_lines = st.selectbox(
                 "Multiple Lines",
-                ["No", "Yes", "No Phone Service"],
+                [
+                    "No",
+                    "Yes",
+                    "No phone service",
+                ],
             )
 
-            st.markdown("### Billing and Contract")
+            st.subheader("Billing and Contract")
 
             contract = st.selectbox(
                 "Contract",
-                ["Month-to-Month", "One Year", "Two Year"],
+                [
+                    "Month-to-Month",
+                    "One Year",
+                    "Two Year",
+                ],
             )
 
             paperless_billing = st.selectbox(
-                "Paperless Billing", ["Yes", "No"]
+                "Paperless Billing",
+                ["Yes", "No"],
             )
 
             payment_method = st.selectbox(
@@ -123,11 +157,14 @@ def build_customer_input():
                 ],
             )
 
-        with col2:
-            st.markdown("### Internet Services")
+        # RIGHT COLUMN
+        with right:
+
+            st.subheader("Internet Services")
 
             internet_service = st.selectbox(
-                "Internet Service", ["Yes", "No"]
+                "Internet Service",
+                ["Yes", "No"],
             )
 
             internet_type = st.selectbox(
@@ -136,7 +173,7 @@ def build_customer_input():
                     "Fiber Optic",
                     "DSL",
                     "Cable",
-                    "No Internet Service",
+                    "None",
                 ],
             )
 
@@ -144,54 +181,66 @@ def build_customer_input():
                 "Avg Monthly GB Download",
                 min_value=0.0,
                 value=25.0,
+                step=1.0,
+                format="%.2f",
             )
 
             service_options = [
                 "No",
                 "Yes",
-                "No Internet Service",
+                "No internet service",
             ]
 
             online_security = st.selectbox(
-                "Online Security", service_options
+                "Online Security",
+                service_options,
             )
 
             online_backup = st.selectbox(
-                "Online Backup", service_options
+                "Online Backup",
+                service_options,
             )
 
             device_protection_plan = st.selectbox(
-                "Device Protection Plan", service_options
+                "Device Protection Plan",
+                service_options,
             )
 
             premium_tech_support = st.selectbox(
-                "Premium Tech Support", service_options
+                "Premium Tech Support",
+                service_options,
             )
 
-            st.markdown("### Streaming Services")
+            st.subheader("Streaming Services")
 
             streaming_tv = st.selectbox(
-                "Streaming TV", service_options
+                "Streaming TV",
+                service_options,
             )
 
             streaming_movies = st.selectbox(
-                "Streaming Movies", service_options
+                "Streaming Movies",
+                service_options,
             )
 
             streaming_music = st.selectbox(
-                "Streaming Music", service_options
+                "Streaming Music",
+                service_options,
             )
 
             unlimited_data = st.selectbox(
-                "Unlimited Data", service_options
+                "Unlimited Data",
+                service_options,
             )
 
-            st.markdown("### Monthly Charges")
+            st.subheader("Monthly Charges")
 
             monthly_charge = st.number_input(
                 "Monthly Charge",
                 min_value=0.0,
                 value=85.0,
+                step=1.0,
+                format="%.2f",
             )
 
         submitted = st.form_submit_button(
@@ -199,6 +248,7 @@ def build_customer_input():
             type="primary",
         )
 
+    # Match the 25 required API fields
     customer_data = {
         "gender": gender,
         "age": age,
@@ -217,8 +267,10 @@ def build_customer_input():
             avg_monthly_gb_download,
         "online_security": online_security,
         "online_backup": online_backup,
-        "device_protection_plan": device_protection_plan,
-        "premium_tech_support": premium_tech_support,
+        "device_protection_plan":
+            device_protection_plan,
+        "premium_tech_support":
+            premium_tech_support,
         "streaming_tv": streaming_tv,
         "streaming_movies": streaming_movies,
         "streaming_music": streaming_music,
@@ -233,22 +285,27 @@ def build_customer_input():
 
 
 # --------------------------------------------------
-# Display prediction results
+# Prediction result display
 # --------------------------------------------------
 
-def show_risk_result(result):
-    churn_probability = result["churn_probability"]
-    churn_percent = result["churn_probability_percent"]
-    prediction = result["prediction"]
+def show_risk_result(result: dict) -> None:
+    """Display prediction results and risk classification."""
 
+    st.divider()
     st.subheader("Prediction Result")
 
-    st.metric(
-        label="Estimated Churn Probability",
-        value=churn_percent,
+    churn_probability = float(
+        result["churn_probability"]
     )
 
-    if prediction == 1:
+    # Display percentage with % symbol
+    st.metric(
+        "Estimated Churn Probability",
+        f"{float(result['churn_probability_percent']):.2f}%",
+    )
+
+    # Display threshold-based classification
+    if result["prediction"] == 1:
         st.warning(
             "The model predicts that this customer "
             "belongs to the churn class."
@@ -259,27 +316,28 @@ def show_risk_result(result):
             "belongs to the non-churn class."
         )
 
-    st.progress(churn_probability)
-
-    st.caption(
-        "The classification uses the model's default "
-        "decision threshold. The estimated probability "
-        "has not yet been independently calibrated."
+    # Probability progress bar
+    st.progress(
+        min(1.0, max(0.0, churn_probability))
     )
 
-    st.markdown("### Raw Prediction Output")
+    # Show actual configured threshold
+    st.caption(
+        f"Risk classification uses the configured "
+        f"{DECISION_THRESHOLD:.0%} decision threshold. "
+        "The estimated probability has not yet been "
+        "independently calibrated."
+    )
+
+    st.subheader("Raw Prediction Output")
     st.json(result)
 
 
 # --------------------------------------------------
-# Main Streamlit application
+# Main application
 # --------------------------------------------------
 
-def main():
-    st.set_page_config(
-        page_title="Churn MLOps Prediction App",
-        layout="wide",
-    )
+def main() -> None:
 
     st.title("Customer Churn Prediction")
 
@@ -291,73 +349,80 @@ def main():
 
     st.divider()
 
+    # Model summary
     st.subheader("Model Summary")
 
-    col1, col2, col3 = st.columns(3)
+    model_col, features_col, artifact_col = st.columns(3)
 
-    col1.metric("Model", "Gradient Boosting")
-    col2.metric("Input Features", "25")
+    model_col.metric(
+        "Model",
+        "Gradient Boosting",
+    )
 
-    col3.metric(
+    features_col.metric(
+        "Input Features",
+        "25",
+    )
+
+    artifact_col.metric(
         "Model Artifact",
-        "Available" if MODEL_FILE.is_file()
-        else "Missing",
+        "Available" if MODEL_FILE.exists() else "Missing",
     )
 
     st.caption(
         "Performance metrics for the reduced 25-feature "
-        "model are pending final evaluation. Metrics "
-        "from the earlier 32-feature model are not "
-        "displayed here."
+        "model are pending final evaluation. "
+        "Metrics from the earlier 32-feature model "
+        "are not displayed here."
     )
 
     st.divider()
 
+    # Customer form
     submitted, customer_data = build_customer_input()
 
-    if submitted:
-        try:
-            # Validate using the same schema as FastAPI
-            customer = CustomerInput.model_validate(
-                customer_data
+    if not submitted:
+        return
+
+    try:
+        # Validate using the FastAPI/Pydantic schema
+        validated_input = CustomerInput.model_validate(
+            customer_data
+        )
+
+        # Convert API fields into model feature names
+        model_input = convert_api_input_to_model_input(
+            validated_input
+        )
+
+        if len(model_input) != 25:
+            raise ValueError(
+                "Expected exactly 25 customer features "
+                "for inference."
             )
 
-            # Convert API field names to model columns
-            model_input = (
-                convert_api_input_to_model_input(
-                    customer
-                )
-            )
+        # Run model inference
+        result = predict_churn(model_input)
 
-            # Verify the expected input size
-            if len(model_input) != 25:
-                st.error(
-                    "Input mismatch: expected 25 features."
-                )
-                return
+        # Display prediction
+        show_risk_result(result)
 
-            # Call the saved prediction pipeline
-            result = predict_churn(model_input)
+    except ValidationError as exc:
+        st.error(
+            f"Invalid customer information: {exc}"
+        )
 
-            st.divider()
-            show_risk_result(result)
+    except FileNotFoundError:
+        st.error(
+            "The trained model artifact could not be found. "
+            "Check src/config.py."
+        )
 
-        except ValidationError as error:
-            st.error("Invalid customer information.")
-            st.write(error.errors())
+    except Exception as exc:
+        st.error(
+            f"Prediction failed: {exc}"
+        )
 
-        except FileNotFoundError:
-            st.error(
-                "The trained model file was not found."
-            )
-            st.code(
-                "python train_reduced_model.py"
-            )
-
-
-# --------------------------------------------------
-# Run application
-# --------------------------------------------------
 
 if __name__ == "__main__":
     main()
